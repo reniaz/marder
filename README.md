@@ -27,7 +27,7 @@ Nothing here is meant to compete with qBittorrent. It's meant to be understood.
 
 - [x] **M1** — Bencode decoder
 - [x] **M2** — Metadata parsing + infohash
-- [x] **M3** — Magnet URI parsing &nbsp;·&nbsp; *in progress*
+- [x] **M3** — Magnet URI parsing
 - [x] **M4** — HTTP tracker announce
 - [ ] **M5** — Peer handshake
 - [ ] **M6** — Download a single piece

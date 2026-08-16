@@ -26,7 +26,6 @@ def main():
     peers = get_peer_list(data)
     if isinstance(peers, bytes):
         raise NotImplementedError("Compact not yet implemented! (M10)")
-    
 
 def get_request_data(url, params) -> BValue:
     request_content = requests.get(url=url, params=params).content
