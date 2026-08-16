@@ -1,52 +1,52 @@
 import sys
-from app.decode import bdecode, get_info_indexes
-from app.classes import Torrent, TorrentFile
-from hashlib import sha1
+import requests
+from app.decode import BValue, bdecode
+from app.torrent import parse_torrent, read_torrent_file
 from app.magnet import parse_magnet_url
-
-def read_test_file(path) -> bytes:
-    with open(path, mode='rb') as f:
-        data = f.read()
-
-    return data
-
-def parse_torrent(raw: bytes) -> Torrent:
-    data = bdecode(raw)
-    assert(isinstance(data, dict))
-    info = data[b'info']
-    assert(isinstance(info, dict))
-
-    start, end = get_info_indexes(raw)
-    info_hash = sha1(raw[start:end])
-
-    if b'files' in info:
-        files = [TorrentFile(length = f[b'length'], path = [p.decode('utf-8') for p in f[b'path']]) for f in info[b'files']]
-    else:
-        files = [TorrentFile(length = info[b'length'], path = [info[b'name'].decode('utf-8')])]
-
-    announce_list = [[url.decode('utf-8') for url in url_list] for url_list in data[b'announce-list']]
-
-    return Torrent(announce=data[b'announce'].decode('utf-8'),
-                   announce_list=announce_list,
-                   name=info[b'name'].decode('utf-8'),
-                   piece_length=info[b'piece length'],
-                   pieces=info[b'pieces'],
-                   files=files,
-                   info_hash_digest=info_hash.digest(),
-                   info_hash_hex=info_hash.hexdigest())
+from app.classes import Client, Peer
 
 def main():
     if len(sys.argv) <= 1:
         print("usage: marder <torrent_file|magnet_url>")
         exit(1)
 
+    query = {}
+    client = Client()
+
     if sys.argv[1].startswith("magnet"):
-        parse_magnet_url(sys.argv[1])
+        magnet = parse_magnet_url(sys.argv[1])
+        pass # Implement magnet downloading later on M13
     else:
-        data = read_test_file(sys.argv[1])
-        # print("Data: " + str(data))
+        data = read_torrent_file(sys.argv[1])
         torrent = parse_torrent(data)
-        print(torrent)
+        query = {'info_hash': torrent.info_hash_digest, 'peer_id': client.peer_id, 'port': client.port, 'uploaded': 0, 'downloaded': 0, 'left': torrent.total_size, 'compact': 1, 'event': 'started'}
+
+    data = get_request_data(torrent.announce_list[0][0], query)
+
+    peers = get_peer_list(data)
+    if isinstance(peers, bytes):
+        raise NotImplementedError("Compact not yet implemented! (M10)")
+    
+
+def get_request_data(url, params) -> BValue:
+    request_content = requests.get(url=url, params=params).content
+    request_data = bdecode(request_content)
+
+    if b'failure reason' in request_data:
+        raise ValueError(f"Failure reason: {request_data[b'failure reason'].decode('utf-8')}")
+
+    if b'warning message' in request_data:
+        print(f"Warning: {request_data[b'warning message'].decode('utf-8')}")
+
+    return request_data
+
+def get_peer_list(data) -> list[Peer]:
+    peers = []
+    if b'peers' in data:
+        for peer in data[b'peers']:
+            peers.append(Peer(ip=peer[b'ip'].decode('utf-8'), port=peer[b'port']))
+
+    return peers
 
 if __name__ == "__main__":
     main()
