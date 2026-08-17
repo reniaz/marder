@@ -1,9 +1,10 @@
 import sys
-import requests
-from app.decode import BValue, bdecode
+import struct
+from socket import socket
+from app.connection import close_socks, create_tcp_connection, get_peer_list, get_request_data
 from app.torrent import parse_torrent, read_torrent_file
 from app.magnet import parse_magnet_url
-from app.classes import Client, Peer
+from app.classes import Client
 
 def main():
     if len(sys.argv) <= 1:
@@ -15,11 +16,13 @@ def main():
 
     if sys.argv[1].startswith("magnet"):
         magnet = parse_magnet_url(sys.argv[1])
-        pass # Implement magnet downloading later on M13
+        print(magnet)
+        return# Implement magnet downloading later on M13
     else:
         data = read_torrent_file(sys.argv[1])
         torrent = parse_torrent(data)
         query = {'info_hash': torrent.info_hash_digest, 'peer_id': client.peer_id, 'port': client.port, 'uploaded': 0, 'downloaded': 0, 'left': torrent.total_size, 'compact': 1, 'event': 'started'}
+
 
     data = get_request_data(torrent.announce_list[0][0], query)
 
@@ -27,25 +30,18 @@ def main():
     if isinstance(peers, bytes):
         raise NotImplementedError("Compact not yet implemented! (M10)")
 
-def get_request_data(url, params) -> BValue:
-    request_content = requests.get(url=url, params=params).content
-    request_data = bdecode(request_content)
+    connected_peer = None
+    sock_data = None
+    for peer in peers:
+        connection = create_tcp_connection(torrent, client, (peer.ip, peer.port))
+        if isinstance(connection, tuple):
+            connected_peer = connection[0]
+            sock_data = connection[1]
+    assert(isinstance(connected_peer, socket))
 
-    if b'failure reason' in request_data:
-        raise ValueError(f"Failure reason: {request_data[b'failure reason'].decode('utf-8')}")
+    print(f"[+] sock_data: {sock_data}")
 
-    if b'warning message' in request_data:
-        print(f"Warning: {request_data[b'warning message'].decode('utf-8')}")
-
-    return request_data
-
-def get_peer_list(data) -> list[Peer]:
-    peers = []
-    if b'peers' in data:
-        for peer in data[b'peers']:
-            peers.append(Peer(ip=peer[b'ip'].decode('utf-8'), port=peer[b'port']))
-
-    return peers
+    connected_peer.close()
 
 if __name__ == "__main__":
     main()
