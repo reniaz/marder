@@ -2,6 +2,7 @@ import sys
 import struct
 from socket import socket
 from app.connection import close_socks, create_tcp_connection, get_peer_list, get_request_data
+from app.decode import bdecode
 from app.torrent import parse_torrent, read_torrent_file
 from app.magnet import parse_magnet_url
 from app.classes import Client
@@ -39,7 +40,7 @@ def main():
             sock_data = connection[1]
     assert(isinstance(connected_peer, socket))
 
-    print(f"[+] sock_data: {sock_data}")
+    print(f"[+] sock_data: {bdecode(sock_data)}")
 
     connected_peer.close()
 
