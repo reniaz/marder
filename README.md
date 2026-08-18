@@ -39,22 +39,9 @@ Nothing here is meant to compete with qBittorrent. It's meant to be understood.
 - [ ] **M12** — Uploading / seeding
 - [ ] **M13+** — Metadata exchange, DHT, PEX
 
-> [!NOTE]
-> Metadata parsing works end to end. Nothing touches the network yet.
-
 ## Usage
 
-```python
-data    = read_test_file()
-torrent = parse_torrent(data)
-
-torrent.name           # 'test_folder'
-torrent.piece_length   # 32768
-torrent.info_hash      # b'\xd2GN\x86...'  — 20 raw bytes
-torrent.files          # [TorrentFile(length=17614527, path=['images', '…jpg']), …]
-```
-
-Info hash verified against qBittorrent.
+### TODO
 
 ## Design notes
 
