@@ -37,10 +37,24 @@ def create_tcp_connection(torrent: Torrent, client: Client, address: tuple[str, 
         if len(sock_data) == 68:
             return sock, sock_data
     except Exception as e:
-        print(f"Exception {e} for: <{address[0]}|{address[1]}>")
+        print(f"[-] Exception {e} for: <{address[0]}|{address[1]}>")
         return None
 
     return None
+
+def validate_connection(sock: socket, sock_data: tuple):
+    protocol_type = sock_data[0]
+    protocol_name = sock_data[1]
+
+    if protocol_type != 19:
+        print(f"[-] protocol_type {protocol_type} doesn't match '19'\n[-] Closing connection!")
+        sock.close()
+        exit(3)
+
+    if protocol_name != b'BitTorrent protocol':
+        print(f"[-] protocol_name {protocol_name} doesn't match b'BitTorrent protocol'\n[-] Closing connection!")
+        sock.close()
+        exit(3)
 
 def close_socks(socks: list[socket]):
     for sock in socks:

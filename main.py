@@ -1,13 +1,17 @@
 import sys
 import struct
 from socket import socket
-from app.connection import close_socks, create_tcp_connection, get_peer_list, get_request_data
+from app.connection import close_socks, create_tcp_connection, get_peer_list, get_request_data, validate_connection
 from app.decode import bdecode
 from app.torrent import parse_torrent, read_torrent_file
 from app.magnet import parse_magnet_url
-from app.classes import Client
+from app.classes import Client, Peer
+from app.utils import clear_screen
+
+handshake_format = "!B19s8s20s20s"
 
 def main():
+    clear_screen()
     if len(sys.argv) <= 1:
         print("usage: marder <torrent_file|magnet_url>")
         exit(1)
@@ -18,7 +22,7 @@ def main():
     if sys.argv[1].startswith("magnet"):
         magnet = parse_magnet_url(sys.argv[1])
         print(magnet)
-        return# Implement magnet downloading later on M13
+        exit(1) # Implement magnet downloading later on M13
     else:
         data = read_torrent_file(sys.argv[1])
         torrent = parse_torrent(data)
@@ -33,16 +37,39 @@ def main():
 
     connected_peer = None
     sock_data = None
+    connected_sock = None
     for peer in peers:
         connection = create_tcp_connection(torrent, client, (peer.ip, peer.port))
         if isinstance(connection, tuple):
-            connected_peer = connection[0]
+            connected_sock = connection[0]
+            connected_peer = peer
             sock_data = connection[1]
-    assert(isinstance(connected_peer, socket))
 
-    print(f"[+] sock_data: {bdecode(sock_data)}")
+    assert(isinstance(connected_peer, Peer))
+    assert(isinstance(connected_sock, socket))
+    assert(isinstance(sock_data, bytes))
 
-    connected_peer.close()
+    clear_screen()
+    print(f'-- Connected to {connected_peer.ip}:{connected_peer.port}--')
+
+    sock_data = struct.unpack(handshake_format, sock_data)
+    validate_connection(connected_sock, sock_data)
+
+    print(f"[+] sock_data: {sock_data}")
+
+    response_info_hash = sock_data[3]
+    print(f"[*] response_info_hash: {response_info_hash}")
+
+    if response_info_hash == torrent.info_hash_digest:
+        print("[+] Info-Hash matched")
+    else:
+        print("[-] Info-Hash mismatch!\n[-] Closing connection!")
+        connected_sock.close()
+        exit(2)
+
+    connected_sock.close()
+    exit(0)
+
 
 if __name__ == "__main__":
     main()

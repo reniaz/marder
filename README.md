@@ -29,7 +29,7 @@ Nothing here is meant to compete with qBittorrent. It's meant to be understood.
 - [x] **M2** — Metadata parsing + infohash
 - [x] **M3** — Magnet URI parsing
 - [x] **M4** — HTTP tracker announce
-- [ ] **M5** — Peer handshake
+- [x] **M5** — Peer handshake
 - [ ] **M6** — Download a single piece
 - [ ] **M7** — Full single-file download
 - [ ] **M8** — Concurrent peers (`asyncio`)
