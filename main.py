@@ -2,7 +2,7 @@ import sys
 import struct
 from socket import socket
 from app.connection import close_socks, create_tcp_connection, get_peer_list, get_request_data, validate_connection
-from app.decode import bdecode
+from app.pieces import read_message
 from app.torrent import parse_torrent, read_torrent_file
 from app.magnet import parse_magnet_url
 from app.classes import Client, Peer
@@ -11,11 +11,11 @@ from app.utils import clear_screen
 handshake_format = "!B19s8s20s20s"
 
 def main():
-    clear_screen()
     if len(sys.argv) <= 1:
         print("usage: marder <torrent_file|magnet_url>")
         exit(1)
 
+    clear_screen()
     query = {}
     client = Client()
 
@@ -50,6 +50,15 @@ def main():
     assert(isinstance(sock_data, bytes))
 
     clear_screen()
+    connected_sock.close()
+
+    connection = create_tcp_connection(torrent, client, (connected_peer.ip, connected_peer.port), timeout=120)
+
+    if isinstance(connection, tuple):
+        connected_sock = connection[0]
+
+    assert(isinstance(connected_sock, socket))
+
     print(f'-- Connected to {connected_peer.ip}:{connected_peer.port}--')
 
     sock_data = struct.unpack(handshake_format, sock_data)
@@ -66,6 +75,9 @@ def main():
         print("[-] Info-Hash mismatch!\n[-] Closing connection!")
         connected_sock.close()
         exit(2)
+
+    for _ in range(60):
+        read_message(connected_sock)
 
     connected_sock.close()
     exit(0)
